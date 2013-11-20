@@ -14,6 +14,10 @@ from djangofeeds.utils import get_default_logger, truncate_field_data
 from djangofeeds.backends import backend_or_default
 from django.utils.timezone import utc
 
+try:
+    import webarticle2text
+except ImportError:
+    webarticle2text = None
 
 class FeedImporter(object):
     """Import/Update feeds.
@@ -221,16 +225,17 @@ class FeedImporter(object):
             recently refreshed already.
 
         """
+        
         now = datetime.utcnow().replace(tzinfo=utc)
         already_fresh = (feed_obj.date_last_refresh and
                          now < feed_obj.date_last_refresh +
                          conf.MIN_REFRESH_INTERVAL)
-
+        
         if already_fresh and not force:
             self.logger.info(
                     "Feed %s is fresh. Skipping refresh." % feed_obj.feed_url)
             return feed_obj
-
+        
         limit = self.post_limit
         if not feed:
             last_modified = None
@@ -246,20 +251,20 @@ class FeedImporter(object):
                 return feed_obj.save_timeout_error()
             except Exception:
                 return feed_obj.save_generic_error()
-
+        
         # Feed can be local/ not fetched with HTTP client.
         status = feed.get("status", http.OK)
         if status == http.NOT_MODIFIED and not force:
             return feed_obj
-
+        
         if feed_obj.is_error_status(status):
             return feed_obj.set_error_status(status)
-
+        
         if feed.entries:
             sorted_by_date = feedutil.entries_by_date(feed.entries, limit)
             for entry in sorted_by_date:
                 self.import_entry(entry, feed_obj)
-
+        
         feed_obj.date_last_refresh = now
         feed_obj.http_etag = feed.get("etag", "")
         if hasattr(feed, "modified") and feed.modified:
@@ -296,10 +301,24 @@ class FeedImporter(object):
 
     def import_entry(self, entry, feed_obj):
         """Import feed post entry."""
-        self.logger.debug("ie: %s Importing entry..." % feed_obj.feed_url)
+        self.logger.debug("Importing entry %s..." % feed_obj.feed_url)
 
         fields = self.post_fields_parsed(entry, feed_obj)
         post = self.post_model.objects.update_or_create(feed_obj, **fields)
+
+        if not post.article_content and conf.GET_ARTICLE_CONTENT:
+            if webarticle2text:
+                self.logger.debug('Download article content from %s...' % post.link)
+                try:
+                    post.article_content = webarticle2text.extractFromURL(post.link)
+                    self.logger.info('Retrieved %s successfully!' % post.link)
+                    post.save()
+                    print '!'*80
+                    print post.article_content
+                except urllib2.HTTPError, e:
+                    self.logger.error('Error: Unable to retrieve %s: %s' % (post.link, e))
+            else:
+                self.logger.warn('Unable to download article content. GET_ARTICLE_CONTENT = True but webarticle2text not installed.')
 
         if self.include_enclosures:
             post.enclosures.add(*(self.get_enclosures(entry) or []))

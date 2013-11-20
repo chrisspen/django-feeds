@@ -148,3 +148,11 @@ REDIS_POST_DB = getattr(settings,
 FSCK_ON_UPDATE = getattr(settings,
                          "DJANGOFEEDS_FSCK_ON_UPDATE",
                          False)
+
+GET_ARTICLE_CONTENT = getattr(settings,
+                         "DJANGOFEEDS_GET_ARTICLE_CONTENT",
+                         False)
+
+ALLOW_ADMIN_FEED_LOOKUPS = getattr(settings,
+                         "DJANGOFEEDS_ALLOW_ADMIN_FEED_LOOKUPS",
+                         False)

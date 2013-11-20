@@ -20,13 +20,13 @@ def print_feed_summary(feed_obj):
             (len(posts), categories_count, enclosures_count))
 
 
-def refresh_all(verbose=True):
+def refresh_all(verbose=True, force=False):
     """ Refresh all feeds in the system. """
     importer = FeedImporter()
     for feed_obj in importer.feed_model.objects.all():
         sys.stderr.write(">>> Refreshing feed %s...\n" % \
                 (feed_obj.name))
-        feed_obj = importer.update_feed(feed_obj)
+        feed_obj = importer.update_feed(feed_obj, force=force)
 
         if verbose:
             print_feed_summary(feed_obj)
@@ -49,6 +49,8 @@ class Command(NoArgsCommand):
         make_option('--file', '-f', action="store", dest="file",
                     help="Import all feeds from a file with feed URLs "
                     "seperated by newline."),
+        make_option('--force', action="store_true", dest="force", default=False,
+                    help="If given, will update feeds even if they're fresh."),
     )
 
     help = ("Refresh feeds", )
@@ -59,7 +61,8 @@ class Command(NoArgsCommand):
     def handle_noargs(self, **options):
         lazy = options.get("lazy")
         from_file = options.get("file")
+        force = options.get('force')
         if from_file or lazy:
             refresh_all_feeds_delayed(from_file)
         else:
-            refresh_all()
+            refresh_all(force=force)

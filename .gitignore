@@ -15,3 +15,5 @@ eggs
 bin
 developer-eggs
 downloads
+/.project
+/.pydevproject

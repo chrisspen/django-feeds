@@ -1,3 +1,4 @@
+import sys
 import logging
 import pytz
 from datetime import datetime
@@ -102,7 +103,10 @@ def get_default_logger():
 
     if _logger is None:
         _logger = logging.getLogger("djangofeeds")
-        channel = logging.StreamHandler()
+        formatter = logging.Formatter('[%(levelname)s] %(message)s')
+        channel = logging.StreamHandler(stream=sys.stdout)
+        channel.setFormatter(formatter)
+        channel.setLevel(logging.DEBUG)
         _logger.addHandler(channel)
-        _logger.setLevel(logging.WARNING)
+        _logger.setLevel(logging.DEBUG)
     return _logger

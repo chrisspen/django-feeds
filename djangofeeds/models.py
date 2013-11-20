@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import signals
 from django.utils.translation import ugettext_lazy as _
 from django.utils.hashcompat import md5_constructor
+from django.utils.encoding import force_text
 
 from djangofeeds import conf
 from djangofeeds.utils import naturaldate
@@ -138,7 +139,9 @@ class Feed(models.Model):
     date_last_requested = models.DateTimeField(_(u"last requested"),
                                                auto_now_add=True)
     is_active = models.BooleanField(_(u"is active"), default=True)
-    freq = models.IntegerField(_(u"frequency"), default=conf.REFRESH_EVERY)
+    freq = models.IntegerField(
+        _(u"frequency"),
+        default=conf.REFRESH_EVERY)
 
     objects = FeedManager()
 
@@ -317,7 +320,15 @@ class Post(models.Model):
     title = models.CharField(_(u"title"), max_length=200)
     # using 2048 for long URLs, only work for MySQL 5.0.3 +
     link = models.URLField(_(u"link"), max_length=2048)
-    content = models.TextField(_(u"content"), blank=True)
+    content = models.TextField(
+        _(u"content"),
+        blank=True,
+        null=True)
+    article_content = models.TextField(
+        _(u"article content"),
+        blank=True,
+        null=True,
+        help_text='''The full article content retrieved from the URL.''')
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
     date_published = models.DateField(_(u"date published"))
@@ -342,6 +353,16 @@ class Post(models.Model):
 
     def __unicode__(self):
         return u"%s" % self.title
+
+    def save(self, *args, **kwargs):
+        
+        self.article_content = (self.article_content or '').strip()
+        if self.article_content:
+            self.article_content = force_text(self.article_content, errors='replace')
+        else:
+            self.article_content = None
+            
+        super(Post, self).save(*args, **kwargs)
 
     @property
     def date_published_naturaldate(self):

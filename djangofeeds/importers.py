@@ -315,7 +315,8 @@ class FeedImporter(object):
                     post.save()
 #                    print '!'*80
 #                    print post.article_content
-                except urllib2.HTTPError, e:
+                #except urllib2.HTTPError, e:
+                except Exception, e:
                     self.logger.error('Error: Unable to retrieve %s: %s' % (post.link, e))
             else:
                 self.logger.warn('Unable to download article content. GET_ARTICLE_CONTENT = True but webarticle2text not installed.')

@@ -16,7 +16,7 @@ def print_feed_summary(feed_obj):
     enclosures_count = sum([post.enclosures.count() for post in posts])
     categories_count = sum([post.categories.count() for post in posts]) \
                         + feed_obj.categories.count()
-    sys.stderr.write("*** Total %d posts, %d categories, %d enclosures\n" % \
+    sys.stdout.write("*** Total %d posts, %d categories, %d enclosures\n" % \
             (len(posts), categories_count, enclosures_count))
 
 
@@ -24,7 +24,7 @@ def refresh_all(verbose=True, force=False):
     """ Refresh all feeds in the system. """
     importer = FeedImporter()
     for feed_obj in importer.feed_model.objects.all():
-        sys.stderr.write(">>> Refreshing feed %s...\n" % \
+        sys.stdout.write(">>> Refreshing feed %s...\n" % \
                 (feed_obj.name))
         feed_obj = importer.update_feed(feed_obj, force=force)
 

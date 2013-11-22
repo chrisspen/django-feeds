@@ -2,8 +2,11 @@ from __future__ import with_statement
 
 import sys
 from optparse import make_option
+from datetime import datetime, timedelta
 
 from django.core.management.base import NoArgsCommand
+from django.db.models import Q
+from django.utils import timezone
 
 from djangofeeds.tasks import refresh_feed
 from djangofeeds.models import Feed
@@ -20,10 +23,14 @@ def print_feed_summary(feed_obj):
             (len(posts), categories_count, enclosures_count))
 
 
-def refresh_all(verbose=True, force=False):
+def refresh_all(verbose=True, force=False, days=1):
     """ Refresh all feeds in the system. """
     importer = FeedImporter()
-    for feed_obj in importer.feed_model.objects.all():
+    q = importer.feed_model.objects.filter(
+        Q(date_last_refresh__isnull=True)|\
+        Q(  date_last_refresh__isnull=False,
+            date_last_refresh__lte=timezone.now()-timedelta(days=days)))
+    for feed_obj in q:
         sys.stdout.write(">>> Refreshing feed %s...\n" % \
                 (feed_obj.name))
         feed_obj = importer.update_feed(feed_obj, force=force)
@@ -51,6 +58,8 @@ class Command(NoArgsCommand):
                     "seperated by newline."),
         make_option('--force', action="store_true", dest="force", default=False,
                     help="If given, will update feeds even if they're fresh."),
+        make_option('--days', dest="days", default=1,
+                    help="The days to wait between consecutive refreshes."),
     )
 
     help = ("Refresh feeds", )
@@ -65,4 +74,4 @@ class Command(NoArgsCommand):
         if from_file or lazy:
             refresh_all_feeds_delayed(from_file)
         else:
-            refresh_all(force=force)
+            refresh_all(force=force, days=int(options['days']))

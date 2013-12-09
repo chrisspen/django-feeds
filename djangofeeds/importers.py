@@ -305,6 +305,10 @@ class FeedImporter(object):
 
         fields = self.post_fields_parsed(entry, feed_obj)
         post = self.post_model.objects.update_or_create(feed_obj, **fields)
+        if not post:
+            self.logger.debug("Unable to update or create post from entry: %s" % (
+                entry))
+            return
 
         if not post.article_content and conf.GET_ARTICLE_CONTENT:
             if webarticle2text:

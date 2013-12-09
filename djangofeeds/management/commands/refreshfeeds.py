@@ -12,6 +12,10 @@ from djangofeeds.tasks import refresh_feed
 from djangofeeds.models import Feed
 from djangofeeds.importers import FeedImporter
 
+try:
+    from chroniker.models import Job
+except ImportError:
+    Job = None
 
 def print_feed_summary(feed_obj):
     """Dump a summary of the feed (how many posts etc.)."""
@@ -30,7 +34,12 @@ def refresh_all(verbose=True, force=False, days=1):
         Q(date_last_refresh__isnull=True)|\
         Q(  date_last_refresh__isnull=False,
             date_last_refresh__lte=timezone.now()-timedelta(days=days)))
-    for feed_obj in q:
+    total = q.count()
+    i = 0
+    for feed_obj in q.iterator():
+        i += 1
+        if Job:
+            Job.update_progress(total_parts=total, total_parts_complete=i)
         sys.stdout.write(">>> Refreshing feed %s...\n" % \
                 (feed_obj.name))
         feed_obj = importer.update_feed(feed_obj, force=force)

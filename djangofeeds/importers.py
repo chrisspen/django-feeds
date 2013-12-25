@@ -1,4 +1,5 @@
 import time
+import re
 import socket
 import feedparser
 import httplib as http
@@ -304,6 +305,17 @@ class FeedImporter(object):
         self.logger.debug("Importing entry %s..." % feed_obj.feed_url)
 
         fields = self.post_fields_parsed(entry, feed_obj)
+        
+        # Extract link from summary instead of link field if pattern specified.
+        if feed_obj.summary_detail_link_regex:
+            link_matches = re.findall(
+                feed_obj.summary_detail_link_regex,
+                entry['summary_detail']['value'],
+                re.I|re.DOTALL)
+            print 'link_matches:',link_matches
+            if link_matches:
+                fields['link'] = link_matches[0].strip()
+        
         post = self.post_model.objects.update_or_create(feed_obj, **fields)
         if not post:
             self.logger.debug("Unable to update or create post from entry: %s" % (

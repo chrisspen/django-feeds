@@ -6,8 +6,14 @@ from django.utils.timezone import utc
 from django.db import models
 from django.db.models import signals
 from django.utils.translation import ugettext_lazy as _
-from django.utils.hashcompat import md5_constructor
 from django.utils.encoding import force_text
+from django.utils import timezone
+
+try:
+    from django.utils.hashcompat import md5_constructor
+except ImportError:
+    import hashlib
+    md5_constructor = hashlib.md5
 
 from djangofeeds import conf
 from djangofeeds.utils import naturaldate
@@ -132,12 +138,20 @@ class Feed(models.Model):
                                  max_length=32, choices=FEED_ERROR_CHOICES)
     ratio = models.FloatField(default=0.0)
     sort = models.SmallIntegerField(_(u"sort order"), default=0)
-    date_created = models.DateTimeField(_(u"date created"), auto_now_add=True)
-    date_changed = models.DateTimeField(_(u"date changed"), auto_now=True)
+    date_created = models.DateTimeField(_(u"date created"), auto_now_add=True, default=timezone.now)
+    date_changed = models.DateTimeField(_(u"date changed"), auto_now=True, default=timezone.now)
     # this date is used to know if the feed is still used by some
     # real users. Update the value when the user use the feed.
     date_last_requested = models.DateTimeField(_(u"last requested"),
                                                auto_now_add=True)
+    summary_detail_link_regex = models.CharField(
+        max_length=1000,
+        blank=True,
+        null=True,
+        help_text=_('''A regular expression to extra the link from the
+            entry\'s summary detail section. This is useful when the entry\'s
+            main link is a wrapper but the summary contains the true URL.'''))
+    
     is_active = models.BooleanField(_(u"is active"), default=True)
     freq = models.IntegerField(
         _(u"frequency"),
@@ -153,6 +167,10 @@ class Feed(models.Model):
     def __init__(self, *args, **kwargs):
         super(Feed, self).__init__(*args, **kwargs)
         self.poststore = backend_or_default()
+
+    def natural_key(self):
+        return (self.feed_url,)
+    natural_key.dependencies = []
 
     def __unicode__(self):
         return u"%s (%s)" % (self.name, self.feed_url)
@@ -317,7 +335,7 @@ class Post(models.Model):
     """
 
     feed = models.ForeignKey(Feed, null=False, blank=False)
-    title = models.CharField(_(u"title"), max_length=200)
+    title = models.CharField(_(u"title"), max_length=1000)
     # using 2048 for long URLs, only work for MySQL 5.0.3 +
     link = models.URLField(_(u"link"), max_length=2048)
     content = models.TextField(

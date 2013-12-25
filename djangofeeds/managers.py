@@ -93,6 +93,8 @@ class FeedManager(ExtendedManager):
     def frequency(self, *args, **kwargs):
         return self.get_query_set().frequency(*args, **kwargs)
 
+    def get_by_natural_key(self, feed_url):
+        return self.get(feed_url=feed_url)
 
 class PostManager(ExtendedManager):
     """Manager class for Posts"""

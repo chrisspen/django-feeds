@@ -151,7 +151,7 @@ FSCK_ON_UPDATE = getattr(settings,
 
 GET_ARTICLE_CONTENT = getattr(settings,
                          "DJANGOFEEDS_GET_ARTICLE_CONTENT",
-                         False)
+                         True)
 
 ALLOW_ADMIN_FEED_LOOKUPS = getattr(settings,
                          "DJANGOFEEDS_ALLOW_ADMIN_FEED_LOOKUPS",

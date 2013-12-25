@@ -18,7 +18,13 @@ if BetterRawIdFieldsModelAdmin:
 
 class FeedAdmin(BaseModelAdmin):
     """Admin for :class:`djangofeeds.models.Feed`."""
-    list_display = ('name', 'feed_url', 'date_last_refresh', 'is_active')
+    list_display = (
+        'name',
+        'feed_url',
+        'date_last_refresh',
+        'is_active',
+        'date_created',
+    )
     search_fields = ['feed_url', 'name']
     
     readonly_fields = (

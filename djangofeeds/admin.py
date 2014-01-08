@@ -1,7 +1,9 @@
 from django.contrib import admin
 from djangofeeds import conf
 
-from djangofeeds.models import Feed, Post, Enclosure, Category
+from djangofeeds.models import (
+    Feed, Post, Enclosure, Category, BlacklistedDomain
+)
 
 NullListFilter = None
 BetterRawIdFieldsModelAdmin = None
@@ -87,6 +89,21 @@ class PostAdmin(BaseModelAdmin):
         return bool(len((obj.article_content or '').strip()))
     has_article.boolean = True
 
+class BlacklistedDomainAdmin(BaseModelAdmin):
+    
+    list_display = (
+        'domain',
+        'created',
+    )
+    
+    search_fields = (
+        'domain',
+    )
+    
+    readonly_fields = (
+        'created',
+    )
+
 if NullListFilter:
     PostAdmin.list_filter.append(('article_content', NullListFilter))
 
@@ -94,3 +111,4 @@ admin.site.register(Category)
 admin.site.register(Enclosure)
 admin.site.register(Feed, FeedAdmin)
 admin.site.register(Post, PostAdmin)
+admin.site.register(BlacklistedDomain, BlacklistedDomainAdmin)

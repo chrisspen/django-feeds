@@ -150,9 +150,21 @@ FSCK_ON_UPDATE = getattr(settings,
                          False)
 
 GET_ARTICLE_CONTENT = getattr(settings,
-                         "DJANGOFEEDS_GET_ARTICLE_CONTENT",
-                         True)
+    "DJANGOFEEDS_GET_ARTICLE_CONTENT",
+    True)
+
+GET_ARTICLE_CONTENT_ONLY_MIME_TYPES = getattr(settings,
+    "DJANGOFEEDS_GET_ARTICLE_CONTENT_ONLY_MIME_TYPES",
+    # There's no point in attempting to extract text from a gif/jpeg/etc.
+    ['text/html', 'text/plain', 'application/xhtml+xml', 'text/xml', 'applicate/xml'])
 
 ALLOW_ADMIN_FEED_LOOKUPS = getattr(settings,
-                         "DJANGOFEEDS_ALLOW_ADMIN_FEED_LOOKUPS",
-                         False)
+    "DJANGOFEEDS_ALLOW_ADMIN_FEED_LOOKUPS",
+    False)
+
+# Some feeds wrap all URLs in a tracking link.
+# These regexes explain how to find the true URL in the post's given URL.
+# e.g. [re.compile(r'&url=([^&$]+)')]
+LINK_URL_REGEXES = getattr(settings,
+    "DJANGOFEEDS_LINK_URL_REGEXES",
+    [])

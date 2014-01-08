@@ -302,6 +302,7 @@ class FeedImporter(object):
 
     def import_entry(self, entry, feed_obj):
         """Import feed post entry."""
+        from djangofeeds.models import BlacklistedDomain
         self.logger.debug("Importing entry %s..." % feed_obj.feed_url)
 
         fields = self.post_fields_parsed(entry, feed_obj)
@@ -312,9 +313,21 @@ class FeedImporter(object):
                 feed_obj.summary_detail_link_regex,
                 entry['summary_detail']['value'],
                 re.I|re.DOTALL)
-            print 'link_matches:',link_matches
+            self.logger.debug('Summary detail links: '+str(link_matches))
             if link_matches:
                 fields['link'] = link_matches[0].strip()
+        
+        if conf.LINK_URL_REGEXES:
+            for pattern in conf.LINK_URL_REGEXES:
+                _matches = pattern.findall(fields['link'])
+                if _matches:
+                    fields['link'] = _matches[0]
+        
+        # Check to see if domain has been blacklisted.
+        if BlacklistedDomain.is_blacklisted(fields['link']):
+            self.logger.info("Ignoring blacklisted URL: %s" % (
+                fields['link']))
+            return
         
         post = self.post_model.objects.update_or_create(feed_obj, **fields)
         if not post:
@@ -326,7 +339,9 @@ class FeedImporter(object):
             if webarticle2text:
                 self.logger.debug('Download article content from %s...' % post.link)
                 try:
-                    post.article_content = webarticle2text.extractFromURL(post.link)
+                    post.article_content = webarticle2text.extractFromURL(
+                        post.link,
+                        only_mime_types=conf.GET_ARTICLE_CONTENT_ONLY_MIME_TYPES)
                     self.logger.info('Retrieved %s successfully!' % post.link)
                     post.save()
 #                    print '!'*80

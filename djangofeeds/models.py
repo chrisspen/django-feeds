@@ -391,3 +391,44 @@ class Post(models.Model):
     @property
     def date_updated_naturaldate(self):
         return unicode(naturaldate(self.date_updated))
+
+class BlacklistedDomain(models.Model):
+    
+    domain = models.CharField(
+        max_length=150,
+        blank=False,
+        null=False,
+        db_index=True,
+        help_text=_('All URLs with this domain will be ignored and not imported.'))
+    
+    created = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        editable=False,
+        blank=True)
+    
+    class Meta:
+        ordering = ('domain',)
+    
+    def __unicode__(self):
+        return self.domain
+    
+    @classmethod
+    def is_blacklisted(cls, url):
+        """
+        Returns true if the given URL matches a blacklisted domain.
+        Returns false otherwise.
+        """
+        from urlparse import urlparse
+        url = (url or '').strip()
+        if not url:
+            return False
+        netloc = urlparse(url).netloc
+        domain2 = '.'.join(netloc.split('.')[-2:])
+        domain3 = '.'.join(netloc.split('.')[-3:])
+        if cls.objects.filter(domain=domain2).count():
+            return True
+        elif cls.objects.filter(domain=domain3).count():
+            return True
+        return False
+    

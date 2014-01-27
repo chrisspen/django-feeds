@@ -15,6 +15,12 @@ except ImportError:
     import hashlib
     md5_constructor = hashlib.md5
 
+try:
+    from admin_steroids.utils import StringWithTitle
+    APP_LABEL = StringWithTitle('djangofeeds', 'Feeds')
+except ImportError:
+    APP_LABEL = 'djangofeeds'
+
 from djangofeeds import conf
 from djangofeeds.utils import naturaldate
 from djangofeeds.managers import FeedManager, PostManager
@@ -75,6 +81,7 @@ class Category(models.Model):
     objects = CategoryManager()
 
     class Meta:
+        app_label = APP_LABEL
         unique_together = ("name", "domain")
         verbose_name = _(u"category")
         verbose_name_plural = _(u"categories")
@@ -160,6 +167,7 @@ class Feed(models.Model):
     objects = FeedManager()
 
     class Meta:
+        app_label = APP_LABEL
         ordering = ("id", )
         verbose_name = _(u"syndication feed")
         verbose_name_plural = _(u"syndication feeds")
@@ -286,6 +294,7 @@ class Enclosure(models.Model):
     objects = EnclosureManager()
 
     class Meta:
+        app_label = APP_LABEL
         verbose_name = _(u"enclosure")
         verbose_name_plural = _(u"enclosures")
 
@@ -357,6 +366,7 @@ class Post(models.Model):
     objects = PostManager()
 
     class Meta:
+        app_label = APP_LABEL
         # sorting on anything else than id is catastrophic for
         # performance
         # even an ordering by id is not smart
@@ -408,6 +418,7 @@ class BlacklistedDomain(models.Model):
         blank=True)
     
     class Meta:
+        app_label = APP_LABEL
         ordering = ('domain',)
     
     def __unicode__(self):

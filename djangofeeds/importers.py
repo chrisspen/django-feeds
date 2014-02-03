@@ -71,7 +71,8 @@ class FeedImporter(object):
     post_field_handlers = {
         "content": feedutil.find_post_content,
         "date_published": feedutil.date_to_datetime("published_parsed"),
-        "date_updated": feedutil.date_to_datetime("updated_parsed"),
+        #"date_updated": feedutil.date_to_datetime("updated_parsed"),
+        "date_updated": feedutil.date_to_datetime("published_parsed"),
         "link": lambda feed_obj, entry: entry.get("link") or feed_obj.feed_url,
         "feed": lambda feed_obj, entry: feed_obj,
         "guid": feedutil.get_entry_guid,

@@ -7,8 +7,11 @@ import pytz
 from base64 import b64encode
 from datetime import datetime, timedelta
 
-from django.utils.text import truncate_html_words
-from django.utils.hashcompat import md5_constructor
+#from django.utils.text import truncate_html_words
+from django.utils.text import Truncator
+
+import hashlib
+md5_constructor = hashlib.md5
 
 from djangofeeds import conf
 from djangofeeds.optimization import PostContentOptimizer
@@ -121,7 +124,7 @@ def entries_by_date(entries, limit=None):
     def find_date(entry, counter):
         """Find the most current date entry tuple."""
 
-        return (entry.get("updated_parsed") or
+        return (entry.get("published_parsed") or
                 entry.get("published_parsed") or
                 entry.get("date_parsed") or
                 now - timedelta(seconds=(counter * 30)))
@@ -133,8 +136,8 @@ def entries_by_date(entries, limit=None):
         # because some feed just don't have any valid dates.
         # This will ensure that the posts will be properly ordered
         # later on when put into the database.
-        entry["updated_parsed"] = date.timetuple()
-        entry["published_parsed"] = entry.get("published_parsed") or \
+        #entry["updated_parsed"] = date.timetuple()
+        entry["updated_parsed"] = entry["published_parsed"] = entry.get("published_parsed") or \
                                         date.timetuple()
         sorted_entries.append((date, entry))
 
@@ -171,7 +174,11 @@ def find_post_content(feed_obj, entry):
             img = ""
         content = img + content
     try:
-        content = truncate_html_words(content, conf.DEFAULT_ENTRY_WORD_LIMIT)
+#        content = truncate_html_words(content, conf.DEFAULT_ENTRY_WORD_LIMIT)
+        end_text = '...'
+        num = conf.DEFAULT_ENTRY_WORD_LIMIT
+        truncate = end_text and ' %s' % end_text or ''
+        content = Truncator(content).words(num, truncate=truncate, html=True)
     except UnicodeDecodeError:
         content = ""
 

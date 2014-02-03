@@ -2,8 +2,10 @@ import pytz
 from datetime import timedelta, datetime
 
 from django.db import models
+from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.core.exceptions import MultipleObjectsReturned
+from django.utils import timezone
 
 from djangofeeds.utils import truncate_field_data
 
@@ -95,6 +97,21 @@ class FeedManager(ExtendedManager):
 
     def get_by_natural_key(self, feed_url):
         return self.get(feed_url=feed_url)
+    
+    def get_stale(self, days=1, qs=None):
+        if qs is None:
+            qs = self
+        return qs.filter(
+            Q(date_last_refresh__isnull=True)|\
+            Q(  date_last_refresh__isnull=False,
+                date_last_refresh__lte=timezone.now()-timedelta(days=days)))
+    
+    def get_fresh(self, days=1, qs=None):
+        if qs is None:
+            qs = self
+        return qs.filter(
+            date_last_refresh__isnull=False,
+            date_last_refresh__gt=timezone.now()-timedelta(days=days))
 
 class PostManager(ExtendedManager):
     """Manager class for Posts"""

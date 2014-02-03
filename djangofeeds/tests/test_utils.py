@@ -135,10 +135,10 @@ class TestNaturalDate(unittest.TestCase):
         entries = [
             {"title": u"first",
              "updated": u"06/01/2010 CET",
-             "updated_parsed": None},
+             "published_parsed": None},
             {"title": u"second",
              "updated": u"23/12/2009 CET",
-             "updated_parsed": None},
+             "published_parsed": None},
         ]
         entries = entries_by_date(entries)
         d1 = date_to_datetime("published_parsed")(None, entries[0])

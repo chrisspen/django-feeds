@@ -9,11 +9,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text
 from django.utils import timezone
 
-try:
-    from django.utils.hashcompat import md5_constructor
-except ImportError:
-    import hashlib
-    md5_constructor = hashlib.md5
+import hashlib
+md5_constructor = hashlib.md5
 
 try:
     from admin_steroids.utils import StringWithTitle
@@ -147,10 +144,13 @@ class Feed(models.Model):
     sort = models.SmallIntegerField(_(u"sort order"), default=0)
     date_created = models.DateTimeField(_(u"date created"), auto_now_add=True, default=timezone.now)
     date_changed = models.DateTimeField(_(u"date changed"), auto_now=True, default=timezone.now)
+    
     # this date is used to know if the feed is still used by some
     # real users. Update the value when the user use the feed.
-    date_last_requested = models.DateTimeField(_(u"last requested"),
-                                               auto_now_add=True)
+    date_last_requested = models.DateTimeField(
+        _(u"last requested"),
+        auto_now_add=True)
+    
     summary_detail_link_regex = models.CharField(
         max_length=1000,
         blank=True,
@@ -160,6 +160,7 @@ class Feed(models.Model):
             main link is a wrapper but the summary contains the true URL.'''))
     
     is_active = models.BooleanField(_(u"is active"), default=True)
+    
     freq = models.IntegerField(
         _(u"frequency"),
         default=conf.REFRESH_EVERY)
@@ -182,6 +183,10 @@ class Feed(models.Model):
 
     def __unicode__(self):
         return u"%s (%s)" % (self.name, self.feed_url)
+
+    def fresh(self):
+        return type(self).objects.get_fresh().filter(id=self.id).exists()
+    fresh.boolean = True
 
     def get_posts(self, **kwargs):
         """Get all :class:`Post`s for this :class:`Feed` in order."""

@@ -28,14 +28,19 @@ def print_feed_summary(feed_obj):
     sys.stdout.write("*** Total %d posts, %d categories, %d enclosures\n" % \
             (len(posts), categories_count, enclosures_count))
 
-def refresh_all(verbose=True, force=False, days=1, name_contains=None):
+def refresh_all(verbose=True, force=False, days=1, name_contains=None, feed_ids=None):
     """ Refresh all feeds in the system. """
     importer = FeedImporter()
 #    q = importer.feed_model.objects.filter(
 #        Q(date_last_refresh__isnull=True)|\
 #        Q(  date_last_refresh__isnull=False,
 #            date_last_refresh__lte=timezone.now()-timedelta(days=days)))
-    q = importer.feed_model.objects.get_stale(days=days)
+    if force:
+        q = importer.feed_model.objects.all()
+    else:
+        q = importer.feed_model.objects.get_stale(days=days)
+    if feed_ids:
+        q = q.filter(id__in=feed_ids)
     q = q.filter(is_active=True)
     if name_contains:
         q = q.filter(name__icontains=name_contains)
@@ -73,6 +78,8 @@ class Command(NoArgsCommand):
                     help="The days to wait between consecutive refreshes."),
         make_option('--name_contains', dest="name_contains", default='',
                     help="Only refreshes feeds whose name contains this text."),
+        make_option('--feeds', dest="feeds", default='',
+                    help="Specific feeds to refresh."),
     )
 
     help = ("Refresh feeds", )
@@ -88,6 +95,7 @@ class Command(NoArgsCommand):
             refresh_all_feeds_delayed(from_file)
         else:
             refresh_all(
+                feed_ids=[int(_.strip()) for _ in (options['feeds'] or '').split(',') if _.strip().isdigit()],
                 force=force,
                 days=int(options['days']),
                 name_contains=options['name_contains'])

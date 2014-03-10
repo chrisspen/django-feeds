@@ -116,6 +116,9 @@ class FeedManager(ExtendedManager):
 class PostManager(ExtendedManager):
     """Manager class for Posts"""
 
+    def all_articleless(self):
+        return self.filter(Q(article_content='')|Q(article_content__isnull=True))
+
     def all_by_order(self, limit=DEFAULT_POST_LIMIT):
         """Get feeds using the default sort order."""
         ordering = self.model._meta.ordering

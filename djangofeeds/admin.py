@@ -129,6 +129,7 @@ class PostAdmin(BaseModelAdmin):
         'title',
     )
     list_filter = [
+        'article_content_error_code',
     ]
     search_fields = ['link', 'title']
     date_hierarchy = 'date_updated'

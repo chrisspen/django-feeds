@@ -356,11 +356,26 @@ class Post(models.Model):
         _(u"content"),
         blank=True,
         null=True)
+    
     article_content = models.TextField(
         _(u"article content"),
         blank=True,
         null=True,
-        help_text='''The full article content retrieved from the URL.''')
+        help_text=_('''The full article content retrieved from the URL.'''))
+    
+    article_content_error_code = models.CharField(
+        max_length=25,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text=_('Any HTTP error code received while attempting to download the article.'))
+    
+    article_content_error_reason = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text=_('Any HTTP error reason received while attempting to download the article.'))
+    
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
     date_published = models.DateField(_(u"date published"))
@@ -406,6 +421,17 @@ class Post(models.Model):
     @property
     def date_updated_naturaldate(self):
         return unicode(naturaldate(self.date_updated))
+    
+    def retrieve_article_content(self, force=False):
+        import webarticle2text
+        if self.article_content and not force:
+            return
+        self.article_content = webarticle2text.extractFromURL(
+            self.link,
+            only_mime_types=conf.GET_ARTICLE_CONTENT_ONLY_MIME_TYPES)
+        self.article_content_error_code = None
+        self.article_content_error_reason = None
+        self.save()
 
 class BlacklistedDomain(models.Model):
     

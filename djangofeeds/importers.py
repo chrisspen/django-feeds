@@ -340,13 +340,7 @@ class FeedImporter(object):
             if webarticle2text:
                 self.logger.debug('Download article content from %s...' % post.link)
                 try:
-                    post.article_content = webarticle2text.extractFromURL(
-                        post.link,
-                        only_mime_types=conf.GET_ARTICLE_CONTENT_ONLY_MIME_TYPES)
-                    self.logger.info('Retrieved %s successfully!' % post.link)
-                    post.save()
-#                    print '!'*80
-#                    print post.article_content
+                    post.retrieve_article_content()
                 #except urllib2.HTTPError, e:
                 except Exception, e:
                     self.logger.error('Error: Unable to retrieve %s: %s' % (post.link, e))

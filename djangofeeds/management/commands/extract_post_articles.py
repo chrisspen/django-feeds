@@ -57,7 +57,7 @@ class Command(BaseCommand):
             sys.stdout.flush()
             try:
                 post.retrieve_article_content(force=options['force'])
-                success_count += len((post.article_content or '').strip())
+                success_count += bool(len((post.article_content or '').strip()))
             except urllib2.HTTPError, e:
                 error_count += 1
                 print>>sys.stderr

@@ -447,4 +447,27 @@ class BlacklistedDomain(models.Model):
         elif cls.objects.filter(domain=domain3).count():
             return True
         return False
+
+class Article(models.Model):
     
+    # MySQL can have no more than 255 length...
+    id = models.CharField(max_length=255, primary_key=True)
+    
+    year = models.PositiveIntegerField(editable=False)
+    
+    month = models.PositiveIntegerField(editable=False)
+    
+    total = models.PositiveIntegerField(editable=False)
+    
+    has_article = models.PositiveIntegerField(editable=False)
+    
+    ratio_extracted = models.FloatField(editable=False)
+    
+    class Meta:
+        managed = False
+        #db_table = 'database_size_table'
+        #db_table = 'database_size_databasesizetable'
+        ordering = ('-year', '-month')
+        app_label = APP_LABEL
+        verbose_name = _('article')
+        

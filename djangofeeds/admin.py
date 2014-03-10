@@ -7,21 +7,15 @@ from django.utils.translation import (
 
 from djangofeeds import conf
 from djangofeeds.models import (
-    Feed, Post, Enclosure, Category, BlacklistedDomain
+    Feed, Post, Enclosure, Category, BlacklistedDomain, Article
 )
 
-NullListFilter = None
-BetterRawIdFieldsModelAdmin = None
-try:
-    from admin_steroids import BetterRawIdFieldsModelAdmin
-    from admin_steroids.utils import get_admin_changelist_url
-    from admin_steroids.filters import NullListFilter
-except ImportError:
-    get_admin_changelist_url = None
+from admin_steroids import BetterRawIdFieldsModelAdmin, ReadonlyModelAdmin
+from admin_steroids.utils import get_admin_changelist_url
+from admin_steroids.filters import NullListFilter
 
 BaseModelAdmin = admin.ModelAdmin
-if BetterRawIdFieldsModelAdmin:
-    BaseModelAdmin = BetterRawIdFieldsModelAdmin
+BaseModelAdmin = BetterRawIdFieldsModelAdmin
 
 class FreshStaleListFilter(SimpleListFilter):
     
@@ -169,6 +163,17 @@ class BlacklistedDomainAdmin(BaseModelAdmin):
         'created',
     )
 
+class ArticleAdmin(ReadonlyModelAdmin):
+    
+    list_display = (
+        'id',
+        'year',
+        'month',
+        'total',
+        'has_article',
+        'ratio_extracted',
+    )
+
 if NullListFilter:
     PostAdmin.list_filter.append(('article_content', NullListFilter))
 
@@ -177,3 +182,5 @@ admin.site.register(Enclosure)
 admin.site.register(Feed, FeedAdmin)
 admin.site.register(Post, PostAdmin)
 admin.site.register(BlacklistedDomain, BlacklistedDomainAdmin)
+admin.site.register(Article, ArticleAdmin)
+

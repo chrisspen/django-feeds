@@ -36,6 +36,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         q = Post.objects.all_articleless()
+        q = q.filter(article_content_error_code__isnull=True)
         year = options['year']
         month = options['month']
         if year:

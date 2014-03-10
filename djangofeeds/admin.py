@@ -4,6 +4,7 @@ from django.utils.translation import (
     ungettext,
     ugettext_lazy as _
 )
+from django.http import HttpResponse, HttpResponseRedirect
 
 from djangofeeds import conf
 from djangofeeds.models import (
@@ -130,6 +131,7 @@ class PostAdmin(BaseModelAdmin):
     )
     list_filter = [
         'article_content_error_code',
+        'article_content_success',
     ]
     search_fields = ['link', 'title']
     date_hierarchy = 'date_updated'
@@ -137,7 +139,16 @@ class PostAdmin(BaseModelAdmin):
     readonly_fields = (
         'has_article',
     )
-
+    
+    actions = (
+        'reset_article_success',
+    )
+    
+    def reset_article_success(self, request, queryset):
+        queryset.update(article_content_success=None)
+        return HttpResponseRedirect(request.META['HTTP_REFERER'])
+    reset_article_success.short_description = 'Reset article content success flag on selected %(verbose_name_plural)s'
+    
     def lookup_allowed(self, *args, **kwargs):
         if conf.ALLOW_ADMIN_FEED_LOOKUPS:
             return True

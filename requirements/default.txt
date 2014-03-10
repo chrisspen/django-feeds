@@ -5,3 +5,4 @@ BeautifulSoup
 httplib2
 html5lib
 pytz
+fake-useragent

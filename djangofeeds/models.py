@@ -9,6 +9,9 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text
 from django.utils import timezone
 
+from fake_useragent import UserAgent
+ua = UserAgent()
+
 import hashlib
 md5_constructor = hashlib.md5
 
@@ -376,6 +379,10 @@ class Post(models.Model):
         null=True,
         help_text=_('Any HTTP error reason received while attempting to download the article.'))
     
+    article_content_success = models.NullBooleanField(default=None, db_index=True)
+    
+    article_content_error = models.TextField(blank=True, null=True)
+    
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
     date_published = models.DateField(_(u"date published"))
@@ -410,6 +417,10 @@ class Post(models.Model):
         else:
             self.article_content = None
             
+#        self.article_content_success = bool((self.article_content or '').strip())
+#        if self.article_content_success:
+#            self.article_content_error = None
+            
         super(Post, self).save(*args, **kwargs)
 
     @property
@@ -428,9 +439,13 @@ class Post(models.Model):
             return
         self.article_content = webarticle2text.extractFromURL(
             self.link,
-            only_mime_types=conf.GET_ARTICLE_CONTENT_ONLY_MIME_TYPES)
+            only_mime_types=conf.GET_ARTICLE_CONTENT_ONLY_MIME_TYPES,
+            ignore_robotstxt=True,
+            userAgent=ua.random)
         self.article_content_error_code = None
         self.article_content_error_reason = None
+        self.article_content_success = bool((self.article_content or '').strip())
+        self.article_content_error = None
         self.save()
 
 class BlacklistedDomain(models.Model):

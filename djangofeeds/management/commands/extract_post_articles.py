@@ -4,6 +4,8 @@ import sys
 import urllib2
 from optparse import make_option
 from datetime import datetime, timedelta
+import traceback
+from StringIO import StringIO
 
 import warnings
 #warnings.simplefilter('error', DeprecationWarning)
@@ -37,6 +39,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         q = Post.objects.all_articleless()
         q = q.filter(article_content_error_code__isnull=True)
+        q = q.filter(article_content_success__isnull=True)
+        #TODO:retry article_content_success=False but with error_code__isnull=False?
         year = options['year']
         month = options['month']
         if year:
@@ -47,26 +51,34 @@ class Command(BaseCommand):
         q = q.order_by('-date_published')
         total = q.count()
         i = 0
-        success_count = 0
-        error_count = 0
+        success_count = 0 # successfully retrieved non-empty content
+        error_count = 0 # any type of exception was thrown
+        meh_count = 0 # no errors were thrown, even if we didn't get content
         print '%i posts without an article.' % (total,)
         for post in q.iterator():
             i += 1
-            print '\rProcessing post %i (%i of %i, %i success, %i errors)...' \
-                % (post.id, i, total, success_count, error_count),
+            print '\rProcessing post %i (%i of %i, %i success, %i errors, %i mehs)...' \
+                % (post.id, i, total, success_count, error_count, meh_count),
             sys.stdout.flush()
             try:
                 post.retrieve_article_content(force=options['force'])
                 success_count += bool(len((post.article_content or '').strip()))
+                meh_count += not bool(len((post.article_content or '').strip()))
             except urllib2.HTTPError, e:
                 error_count += 1
                 print>>sys.stderr
                 print>>sys.stderr, 'Error: Unable to retrieve %s: %s' % (post.link, e)
                 post.article_content_error_code = e.code
                 post.article_content_error_reason = e.reason
+                post.article_content_success = False
                 post.save()
             except Exception, e:
-                raise
+                post.article_content_success = False
+                ferr = StringIO()
+                traceback.print_exc(file=ferr)
+                post.article_content = None
+                post.article_content_error = ferr.getvalue()
+                post.save()
                 error_count += 1
                 print>>sys.stderr
                 print>>sys.stderr, 'Error: Unable to retrieve %s: %s' % (post.link, e)

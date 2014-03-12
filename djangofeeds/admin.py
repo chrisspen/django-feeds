@@ -184,6 +184,7 @@ class ArticleAdmin(ReadonlyModelAdmin):
         'total',
         'has_article',
         'ratio_extracted',
+        'mean_length',
     )
 
 if NullListFilter:

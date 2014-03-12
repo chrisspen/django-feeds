@@ -366,6 +366,12 @@ class Post(models.Model):
         null=True,
         help_text=_('''The full article content retrieved from the URL.'''))
     
+    article_content_length = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        editable=False,
+        db_index=True)
+    
     article_content_error_code = models.CharField(
         max_length=25,
         blank=True,
@@ -416,6 +422,7 @@ class Post(models.Model):
             self.article_content = force_text(self.article_content, errors='replace')
         else:
             self.article_content = None
+        self.article_content_length = len((self.article_content or '').strip())
             
 #        self.article_content_success = bool((self.article_content or '').strip())
 #        if self.article_content_success:
@@ -501,6 +508,8 @@ class Article(models.Model):
     total = models.PositiveIntegerField(editable=False)
     
     has_article = models.PositiveIntegerField(editable=False)
+    
+    mean_length = models.PositiveIntegerField(editable=False)
     
     ratio_extracted = models.FloatField(editable=False)
     

@@ -17,10 +17,7 @@ from django.utils import timezone
 from djangofeeds.models import Feed
 from djangofeeds.importers import FeedImporter
 
-try:
-    from chroniker.models import Job
-except ImportError:
-    Job = None
+from chroniker.models import Job
 
 def print_feed_summary(feed_obj):
     """Dump a summary of the feed (how many posts etc.)."""
@@ -56,6 +53,7 @@ def refresh_all(lock, verbose=True, force=False, days=1, name_contains=None, fee
         feed = None
         try:
             lock.acquire()
+            connection.close()
             q = get_feeds(
                 importer=importer,
                 force=force,
@@ -63,30 +61,30 @@ def refresh_all(lock, verbose=True, force=False, days=1, name_contains=None, fee
                 feed_ids=feed_ids,
                 name_contains=name_contains,
             )
-            if first:
-                if total is None:
-                    total = q.count()
-                if last_total is not None:
-                    i = total - last_total
-                last_total = total
+#            if first:
+            if total is None:
+                total = q.count()
+            if last_total is not None:
+                i = total - last_total
+            last_total = total
             if q.exists():
                 feed = q[0]
                 feed.date_last_refresh = timezone.now()
                 feed.save()
                 print "Refreshing feed %s..." % (feed.name,)
+                print '%i of %i' % (i, total)
+            
+            # Update status.
+            connection.close()
+            Job.objects.update()
+            if feed:
+                Job.update_progress(total_parts=total, total_parts_complete=i, lock=False)
             else:
-                print 'Nothing left to evaluate.'
+                Job.update_progress(total_parts=total, total_parts_complete=total, lock=False)
+                connection.close()
                 return
         finally:
             lock.release()
-    
-        # Update status.
-        if first and Job:
-            if feed:
-                Job.update_progress(total_parts=total, total_parts_complete=i)
-            else:
-                Job.update_progress(total_parts=total, total_parts_complete=total)
-                return
         
         # Update feed.
         feed = importer.update_feed(feed, force=True)

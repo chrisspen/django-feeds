@@ -17,10 +17,7 @@ from django.utils import timezone
 from djangofeeds.models import Feed, Post
 from djangofeeds.importers import FeedImporter
 
-try:
-    from chroniker.models import Job
-except ImportError:
-    Job = None
+from chroniker.models import Job
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
@@ -60,6 +57,7 @@ class Command(BaseCommand):
             print '\rProcessing post %i (%i of %i, %i success, %i errors, %i mehs)...' \
                 % (post.id, i, total, success_count, error_count, meh_count),
             sys.stdout.flush()
+            Job.update_progress(total_parts=total, total_parts_complete=i)
             try:
                 post.retrieve_article_content(force=options['force'])
                 success_count += bool(len((post.article_content or '').strip()))

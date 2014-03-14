@@ -53,7 +53,7 @@ def refresh_all(lock, verbose=True, force=False, days=1, name_contains=None, fee
         feed = None
         try:
             lock.acquire()
-            connection.close()
+            #connection.close()
             q = get_feeds(
                 importer=importer,
                 force=force,
@@ -66,17 +66,16 @@ def refresh_all(lock, verbose=True, force=False, days=1, name_contains=None, fee
                 total = q.count()
             if last_total is not None:
                 i = total - last_total
-            last_total = total
+            last_total = q.count()
             if q.exists():
                 feed = q[0]
                 feed.date_last_refresh = timezone.now()
                 feed.save()
-                print "Refreshing feed %s..." % (feed.name,)
-                print '%i of %i' % (i, total)
+                print "Refreshing feed %s (%i of %i)..." % (feed.name, i, total)
             
             # Update status.
-            connection.close()
-            Job.objects.update()
+#            connection.close()
+#            Job.objects.update()
             if feed:
                 Job.update_progress(total_parts=total, total_parts_complete=i, lock=False)
             else:

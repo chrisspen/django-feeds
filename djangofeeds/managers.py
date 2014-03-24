@@ -124,6 +124,12 @@ class PostManager(ExtendedManager):
         ordering = self.model._meta.ordering
         return self.all().order_by(*ordering)[:limit]
 
+    def all_ngramless(self):
+        return self.filter(
+            article_ngrams_extracted=False,
+            article_content_success=True,
+            article_content_length__gt=0)
+
     def update_or_create(self, feed_obj, **fields):
         """Update post with new values."""
         super_update = super(PostManager, self).update_or_create

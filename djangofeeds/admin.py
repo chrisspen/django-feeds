@@ -8,11 +8,13 @@ from django.http import HttpResponse, HttpResponseRedirect
 
 from djangofeeds import conf
 from djangofeeds.models import (
-    Feed, Post, Enclosure, Category, BlacklistedDomain, Article
+    Feed, Post, Enclosure, Category,
+    BlacklistedDomain,
+    Article, NGram, PostNGram,
 )
 
 from admin_steroids import BetterRawIdFieldsModelAdmin, ReadonlyModelAdmin
-from admin_steroids.utils import get_admin_changelist_url
+from admin_steroids.utils import get_admin_changelist_url, view_related_link, view_link
 from admin_steroids.filters import NullListFilter
 
 BaseModelAdmin = admin.ModelAdmin
@@ -138,11 +140,19 @@ class PostAdmin(BaseModelAdmin):
     
     readonly_fields = (
         'has_article',
+        'ngrams_link',
     )
     
     actions = (
         'reset_article_success',
     )
+    
+    def ngrams_link(self, obj=None):
+        if not obj:
+            return ''
+        return view_related_link(obj, 'ngrams')
+    ngrams_link.short_description = 'ngrams'
+    ngrams_link.allow_tags = True
     
     def reset_article_success(self, request, queryset):
         queryset.update(article_content_success=None)
@@ -187,6 +197,58 @@ class ArticleAdmin(ReadonlyModelAdmin):
         'mean_length',
     )
 
+class NGramAdmin(BaseModelAdmin):
+    
+    list_display = (
+        'text',
+        'n',
+    )
+    
+    list_filter = (
+        'n',
+    )
+    
+    search_fields = (
+        'text',
+    )
+    
+    readonly_fields = (
+        'text',
+        'n',
+    )
+
+class PostNGramAdmin(BaseModelAdmin):
+    
+    list_display = (
+        'post',
+        'ngram',
+        'count',
+    )
+    
+    search_fields = (
+        'ngram__text',
+    )
+    
+    readonly_fields = (
+        'post',
+        'post_link',
+        'ngram',
+        'count',
+    )
+    
+    fields = (
+        'post_link',
+        'ngram',
+        'count',
+    )
+    
+    def post_link(self, obj=None):
+        if not obj:
+            return ''
+        return view_link(obj.post)
+    post_link.short_description = 'post'
+    post_link.allow_tags = True
+    
 if NullListFilter:
     PostAdmin.list_filter.append(('article_content', NullListFilter))
 
@@ -197,3 +259,5 @@ admin.site.register(Post, PostAdmin)
 admin.site.register(BlacklistedDomain, BlacklistedDomainAdmin)
 admin.site.register(Article, ArticleAdmin)
 
+admin.site.register(NGram, NGramAdmin)
+admin.site.register(PostNGram, PostNGramAdmin)

@@ -1,10 +1,13 @@
 """Model working with Feeds and Posts."""
+import re
 import httplib as http
 from datetime import datetime, timedelta
 from django.utils.timezone import utc
+from collections import defaultdict
 
 from django.db import models
 from django.db.models import signals
+from django.db.transaction import commit_on_success
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text
 from django.utils import timezone
@@ -389,6 +392,11 @@ class Post(models.Model):
     
     article_content_error = models.TextField(blank=True, null=True)
     
+    article_ngrams_extracted = models.BooleanField(
+        default=False,
+        editable=True,
+        db_index=True)
+    
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
     date_published = models.DateField(_(u"date published"))
@@ -417,13 +425,20 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs):
         
+        old = None
+        if self.id:
+            old = type(self).objects.get(id=self.id)
+        
         self.article_content = (self.article_content or '').strip()
         if self.article_content:
             self.article_content = force_text(self.article_content, errors='replace')
         else:
             self.article_content = None
         self.article_content_length = len((self.article_content or '').strip())
-            
+        
+        if old and old.article_content != self.article_content:
+            self.article_ngrams_extracted = False
+        
 #        self.article_content_success = bool((self.article_content or '').strip())
 #        if self.article_content_success:
 #            self.article_content_error = None
@@ -454,6 +469,93 @@ class Post(models.Model):
         self.article_content_success = bool((self.article_content or '').strip())
         self.article_content_error = None
         self.save()
+    
+    @commit_on_success
+    def extract_ngrams(self):
+        if self.article_ngrams_extracted:
+            return
+        
+        self.ngrams.all().delete()
+        
+        min_text_length = 4
+        min_n = 1
+        max_n = 6
+        
+        content = (self.content or '') + (self.article_content or '')
+        
+        text = content.strip().lower()
+        text = re.sub(r'[^a-zA-Z0-9]+', ' ', text, flags=re.DOTALL)
+        text = re.sub(r'[\s\t\n\r]+', ' ', text, flags=re.DOTALL)
+        text = text.strip()
+        text = text.split(' ')
+        
+        from nltk.util import ngrams as ngrams_iter
+        ngrams = []
+        for n in xrange(min_n, max_n+1):
+            ngrams.extend(ngrams_iter(sequence=text, n=n))
+        print '%i ngrams' % len(ngrams)
+        ngram_counts = defaultdict(int)
+        for ngram in ngrams:
+            ngram = (' '.join(ngram)).strip()
+            if len(ngram) < min_text_length:
+                continue
+            ngram_counts[ngram] += 1
+            NGram.objects.get_or_create(text=ngram)
+        
+        PostNGram.objects.bulk_create([
+            PostNGram(post=self, ngram=NGram.objects.get(text=ngram), count=count)
+            for ngram, count in ngram_counts.iteritems()
+        ])
+        
+        self.article_ngrams_extracted = True
+        self.save()
+
+class NGram(models.Model):
+    
+    text = models.CharField(
+        max_length=1000,
+        blank=False,
+        null=False,
+        unique=True,
+        editable=False,
+        db_index=True)
+    
+    n = models.PositiveIntegerField(
+        blank=False,
+        null=False,
+        editable=False,
+        db_index=True)
+    
+    def __unicode__(self):
+        return self.text
+    
+    def save(self, *args, **kwargs):
+        
+        self.text = (self.text or '').strip().lower()
+        
+        self.n = self.text.count(' ') + 1
+        
+        super(NGram, self).save(*args, **kwargs)
+
+class PostNGram(models.Model):
+    """
+    Links an n-gram to a specific post.
+    """
+    
+    post = models.ForeignKey('Post', related_name='ngrams', editable=False)
+    
+    ngram = models.ForeignKey('NGram', related_name='posts', editable=False)
+    
+    count = models.PositiveIntegerField(
+        blank=False,
+        null=False,
+        editable=False,
+        db_index=True)
+    
+    class Meta:
+        unique_together = (
+            ('post', 'ngram'),
+        )
 
 class BlacklistedDomain(models.Model):
     

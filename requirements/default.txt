@@ -6,3 +6,4 @@ httplib2
 html5lib
 pytz
 fake-useragent
+nltk==2.0.4

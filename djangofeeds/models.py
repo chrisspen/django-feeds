@@ -504,7 +504,7 @@ class Post(models.Model):
             ngram_counts[ngram] += 1
             if ngram not in new_ngrams and not NGram.objects.filter(text=ngram).exists():
                 new_ngrams.add(ngram)
-                new_ngram_objects.append(NGram(text=ngram))
+                new_ngram_objects.append(NGram(text=ngram, n=ngram.count(' ')+1))
         
         NGram.objects.bulk_create(new_ngram_objects)
         PostNGram.objects.bulk_create([

@@ -13,6 +13,7 @@ import warnings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
+from django.conf import settings
 
 from djangofeeds.models import Feed, Post
 from djangofeeds.importers import FeedImporter
@@ -29,12 +30,17 @@ class Command(BaseCommand):
     help = ("Attempts to extract the article text from the URL associated with each post.", )
 
     def handle(self, *args, **options):
-        q = Post.objects.all_ngramless()
-        total = q.count()
-        i = 0
-        print '%i total records.' % (total,)
-        for post in q.iterator():
-            i += 1
-            print '\r%i of %i %.2f%%' % (i, total, i/float(total)*100),
-            post.extract_ngrams()
-            #break
+        tmp_debug = settings.DEBUG
+        settings.DEBUG = False
+        try:
+            q = Post.objects.all_ngramless().only('id')
+            total = q.count()
+            i = 0
+            print '%i total records.' % (total,)
+            for post in q.iterator():
+                i += 1
+                print '\r%i of %i %.2f%%' % (i, total, i/float(total)*100),
+                post.extract_ngrams()
+        finally:
+            settings.DEBUG = tmp_debug
+            

@@ -5,12 +5,14 @@ from datetime import datetime, timedelta
 from django.utils.timezone import utc
 from collections import defaultdict
 
-from django.db import models
+from django.db import models, reset_queries
 from django.db.models import signals
 from django.db.transaction import commit_on_success
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text
 from django.utils import timezone
+
+from nltk.util import ngrams as ngrams_iter
 
 from fake_useragent import UserAgent
 ua = UserAgent()
@@ -489,7 +491,6 @@ class Post(models.Model):
         text = text.strip()
         text = text.split(' ')
         
-        from nltk.util import ngrams as ngrams_iter
         ngrams = []
         for n in xrange(min_n, max_n+1):
             ngrams.extend(ngrams_iter(sequence=text, n=n))

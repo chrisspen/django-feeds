@@ -6,12 +6,14 @@ from optparse import make_option
 from datetime import datetime, timedelta
 import traceback
 from StringIO import StringIO
+import gc
 
 import warnings
 #warnings.simplefilter('error', DeprecationWarning)
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q
+from django.db import models, reset_queries
 from django.utils import timezone
 from django.conf import settings
 
@@ -41,6 +43,8 @@ class Command(BaseCommand):
                 i += 1
                 print '\r%i of %i %.2f%%' % (i, total, i/float(total)*100),
                 post.extract_ngrams()
+                reset_queries()
+                gc.collect()
         finally:
             settings.DEBUG = tmp_debug
             

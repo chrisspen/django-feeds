@@ -481,7 +481,7 @@ class Post(models.Model):
         min_n = 1
         max_n = 6
         
-        content = (self.content or '') + (self.article_content or '')
+        content = (self.content or '') + ' ' + (self.article_content or '')
         
         text = content.strip().lower()
         text = re.sub(r'[^a-zA-Z0-9]+', ' ', text, flags=re.DOTALL)
@@ -495,13 +495,18 @@ class Post(models.Model):
             ngrams.extend(ngrams_iter(sequence=text, n=n))
         print '%i ngrams' % len(ngrams)
         ngram_counts = defaultdict(int)
+        new_ngram_objects = []
+        new_ngrams = set()
         for ngram in ngrams:
             ngram = (' '.join(ngram)).strip()
             if len(ngram) < min_text_length:
                 continue
             ngram_counts[ngram] += 1
-            NGram.objects.get_or_create(text=ngram)
+            if ngram not in new_ngrams and not NGram.objects.filter(text=ngram).exists():
+                new_ngrams.add(ngram)
+                new_ngram_objects.append(NGram(text=ngram))
         
+        NGram.objects.bulk_create(new_ngram_objects)
         PostNGram.objects.bulk_create([
             PostNGram(post=self, ngram=NGram.objects.get(text=ngram), count=count)
             for ngram, count in ngram_counts.iteritems()

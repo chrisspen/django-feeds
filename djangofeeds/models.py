@@ -1,10 +1,13 @@
 """Model working with Feeds and Posts."""
+import sys
 import re
+import gc
 import httplib as http
 from datetime import datetime, timedelta
 from django.utils.timezone import utc
 from collections import defaultdict
 
+from django.conf import settings
 from django.db import models, reset_queries
 from django.db.models import signals
 from django.db.transaction import commit_on_success
@@ -316,8 +319,10 @@ class Enclosure(models.Model):
     def __unicode__(self):
         return u"%s %s (%d)" % (self.url, self.type, self.length)
 
+from chroniker.models import Job
+from django_materialized_views.models import MaterializedView, parse_stripe
 
-class Post(models.Model):
+class Post(models.Model, MaterializedView):
     """A Post for an RSS feed
 
     .. attribute:: feed
@@ -482,6 +487,38 @@ class Post(models.Model):
         self.article_content_error = None
         self.save()
     
+    @classmethod
+    def needs_update(cls, *args, **kwargs):
+        return bool(Post.objects.all_ngramless().only('id').exists())
+    
+    stripable = True
+    
+    @classmethod
+    def do_update(cls, stripe=None, print_status=None, *args, **kwargs):
+        tmp_debug = settings.DEBUG
+        settings.DEBUG = False
+        print_status = print_status or (lambda message, count=0, total=0: sys.stdout.write(message+'\n'))
+        try:
+            stripe_num, stripe_mod = parse_stripe(stripe)
+            q = Post.objects.all_ngramless().only('id')
+            if stripe is not None:
+                # Note, we need to escape modulo operator twice since QuerySet does
+                # additional parameter interpolation.
+                q = q.extra(where=['((id %%%% %i) = %i)' % (stripe_mod, stripe_num)])
+            total = q.count()
+            i = 0
+            print_status('%i total records.' % (total,))
+            for post in q.iterator():
+                i += 1
+                #print '\r%i of %i %.2f%%' % (i, total, i/float(total)*100),
+                message = '%i of %i %.2f%%' % (i, total, i/float(total)*100)
+                print_status(message=message, total=total, count=i)
+                post.extract_ngrams()
+                reset_queries()
+                gc.collect()
+        finally:
+            settings.DEBUG = tmp_debug
+    
     @commit_on_success
     def extract_ngrams(self):
         if self.article_ngrams_extracted or not self.article_content_length:
@@ -504,7 +541,7 @@ class Post(models.Model):
         ngrams = []
         for n in xrange(min_n, max_n+1):
             ngrams.extend(ngrams_iter(sequence=text, n=n))
-        print '%i ngrams' % len(ngrams)
+        #print '%i ngrams' % len(ngrams)
         #ngram_counts = defaultdict(int)
         ngram_counts = {}
 #        new_ngram_objects = []

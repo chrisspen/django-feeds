@@ -134,13 +134,16 @@ class PostAdmin(BaseModelAdmin):
     list_filter = [
         'article_content_error_code',
         'article_content_success',
+        'article_ngrams_extracted',
     ]
     search_fields = ['link', 'title']
     date_hierarchy = 'date_updated'
     
     readonly_fields = (
         'has_article',
-        'ngrams_link',
+        #'ngrams_link',
+        'article_ngram_counts',
+        'article_ngrams_extracted_datetime',
     )
     
     actions = (
@@ -259,5 +262,5 @@ admin.site.register(Post, PostAdmin)
 admin.site.register(BlacklistedDomain, BlacklistedDomainAdmin)
 admin.site.register(Article, ArticleAdmin)
 
-admin.site.register(NGram, NGramAdmin)
-admin.site.register(PostNGram, PostNGramAdmin)
+#admin.site.register(NGram, NGramAdmin)
+#admin.site.register(PostNGram, PostNGramAdmin)

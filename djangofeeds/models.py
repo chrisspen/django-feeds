@@ -12,6 +12,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text
 from django.utils import timezone
 
+from picklefield.fields import PickledObjectField
+
 from nltk.util import ngrams as ngrams_iter
 
 from fake_useragent import UserAgent
@@ -399,6 +401,14 @@ class Post(models.Model):
         editable=True,
         db_index=True)
     
+    article_ngrams_extracted_datetime = models.DateTimeField(
+        blank=True,
+        null=True,
+        editable=False,
+        db_index=True)
+    
+    article_ngram_counts = PickledObjectField(blank=True, null=True) # {ngram:count}
+    
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
     date_published = models.DateField(_(u"date published"))
@@ -474,10 +484,10 @@ class Post(models.Model):
     
     @commit_on_success
     def extract_ngrams(self):
-        if self.article_ngrams_extracted:
+        if self.article_ngrams_extracted or not self.article_content_length:
             return
         
-        self.ngrams.all().delete()
+        #self.ngrams.all().delete()
         
         min_text_length = 4
         min_n = 1
@@ -495,25 +505,29 @@ class Post(models.Model):
         for n in xrange(min_n, max_n+1):
             ngrams.extend(ngrams_iter(sequence=text, n=n))
         print '%i ngrams' % len(ngrams)
-        ngram_counts = defaultdict(int)
-        new_ngram_objects = []
-        new_ngrams = set()
+        #ngram_counts = defaultdict(int)
+        ngram_counts = {}
+#        new_ngram_objects = []
+#        new_ngrams = set()
         for ngram in ngrams:
             ngram = (' '.join(ngram)).strip()
             if len(ngram) < min_text_length:
                 continue
+            ngram_counts.setdefault(ngram, 0)
             ngram_counts[ngram] += 1
-            if ngram not in new_ngrams and not NGram.objects.filter(text=ngram).exists():
-                new_ngrams.add(ngram)
-                new_ngram_objects.append(NGram(text=ngram, n=ngram.count(' ')+1))
+#            if ngram not in new_ngrams and not NGram.objects.filter(text=ngram).exists():
+#                new_ngrams.add(ngram)
+#                new_ngram_objects.append(NGram(text=ngram, n=ngram.count(' ')+1))
         
-        NGram.objects.bulk_create(new_ngram_objects)
-        PostNGram.objects.bulk_create([
-            PostNGram(post=self, ngram=NGram.objects.get(text=ngram), count=count)
-            for ngram, count in ngram_counts.iteritems()
-        ])
+#        NGram.objects.bulk_create(new_ngram_objects)
+#        PostNGram.objects.bulk_create([
+#            PostNGram(post=self, ngram=NGram.objects.get(text=ngram), count=count)
+#            for ngram, count in ngram_counts.iteritems()
+#        ])
         
+        self.article_ngram_counts = ngram_counts
         self.article_ngrams_extracted = True
+        self.article_ngrams_extracted_datetime = datetime.now()
         self.save()
 
 class NGram(models.Model):

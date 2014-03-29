@@ -9,12 +9,13 @@ from djangofeeds.models import Post
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-#        make_option('--feeds', dest="feeds", default='',
-#                    help="Specific feeds to refresh."),
+        make_option('--posts', default='',
+                    help="Specific posts to refresh."),
     )
 
     help = ("Extracts n-grams from the article text.", )
 
     def handle(self, *args, **options):
-        Post.do_update()
+        post_ids = map(int, [_ for _ in options['posts'].strip().split(',') if _.strip().isdigit()])
+        Post.do_update(post_ids=post_ids)
         

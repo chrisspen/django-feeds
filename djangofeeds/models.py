@@ -403,7 +403,7 @@ class Post(models.Model, MaterializedView):
     
     article_ngrams_extracted = models.BooleanField(
         default=False,
-        editable=True,
+        editable=False,
         db_index=True)
     
     article_ngrams_extracted_datetime = models.DateTimeField(
@@ -412,7 +412,11 @@ class Post(models.Model, MaterializedView):
         editable=False,
         db_index=True)
     
-    article_ngram_counts = PickledObjectField(blank=True, null=True) # {ngram:count}
+    article_ngram_counts = PickledObjectField(
+        blank=True,
+        null=True,
+        compress=True,
+        help_text=_('{ngram:count}'))
     
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
@@ -494,13 +498,15 @@ class Post(models.Model, MaterializedView):
     stripable = True
     
     @classmethod
-    def do_update(cls, stripe=None, print_status=None, *args, **kwargs):
+    def do_update(cls, stripe=None, print_status=None, post_ids=None, *args, **kwargs):
         tmp_debug = settings.DEBUG
         settings.DEBUG = False
         print_status = print_status or (lambda message, count=0, total=0: sys.stdout.write(message+'\n'))
         try:
             stripe_num, stripe_mod = parse_stripe(stripe)
             q = Post.objects.all_ngramless().only('id')
+            if post_ids:
+                q = q.filter(id__in=post_ids)
             if stripe is not None:
                 # Note, we need to escape modulo operator twice since QuerySet does
                 # additional parameter interpolation.

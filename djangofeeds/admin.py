@@ -142,6 +142,7 @@ class PostAdmin(BaseModelAdmin):
     readonly_fields = (
         'has_article',
         #'ngrams_link',
+        'article_ngrams_extracted',
         'article_ngram_counts',
         'article_ngrams_extracted_datetime',
     )

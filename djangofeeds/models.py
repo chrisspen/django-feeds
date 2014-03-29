@@ -523,15 +523,15 @@ class Post(models.Model, MaterializedView):
                 #print '\r%i of %i %.2f%%' % (i, total, i/float(total)*100),
                 message = '%i of %i %.2f%%' % (i, total, i/float(total)*100)
                 print_status(message=message, total=total, count=i)
-                post.extract_ngrams()
+                post.extract_ngrams(force=force)
                 reset_queries()
                 gc.collect()
         finally:
             settings.DEBUG = tmp_debug
     
     @commit_on_success
-    def extract_ngrams(self):
-        if self.article_ngrams_extracted or not self.article_content_length:
+    def extract_ngrams(self, force=False):
+        if not force and (self.article_ngrams_extracted or not self.article_content_length):
             return
         
         #self.ngrams.all().delete()

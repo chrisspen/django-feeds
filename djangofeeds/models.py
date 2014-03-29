@@ -498,13 +498,17 @@ class Post(models.Model, MaterializedView):
     stripable = True
     
     @classmethod
-    def do_update(cls, stripe=None, print_status=None, post_ids=None, *args, **kwargs):
+    def do_update(cls, stripe=None, print_status=None, post_ids=None, force=False, *args, **kwargs):
         tmp_debug = settings.DEBUG
         settings.DEBUG = False
         print_status = print_status or (lambda message, count=0, total=0: sys.stdout.write(message+'\n'))
         try:
             stripe_num, stripe_mod = parse_stripe(stripe)
-            q = Post.objects.all_ngramless().only('id')
+            if force:
+                q = Post.objects.all_ngramable()
+            else:
+                q = Post.objects.all_ngramless()
+            q = q.only('id')
             if post_ids:
                 q = q.filter(id__in=post_ids)
             if stripe is not None:

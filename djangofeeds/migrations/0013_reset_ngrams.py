@@ -1,16 +1,34 @@
 # -*- coding: utf-8 -*-
+import sys
 from south.utils import datetime_utils as datetime
 from south.db import db
 from south.v2 import DataMigration
-from django.db import models
+from django.db import models, transaction
+from django.conf import settings
 
 class Migration(DataMigration):
 
     def forwards(self, orm):
         "Write your forwards methods here."
-        Post = orm['djangofeeds.Post']
-        Post.objects.filter(article_ngram_counts__isnull=False).update(
-            article_ngrams_extracted=False, article_ngrams_extracted_datetime=None, article_ngram_counts=None)
+        tmp_debug = settings.DEBUG
+        try:
+            Post = orm['djangofeeds.Post']
+            q = Post.objects.filter(article_ngram_counts__isnull=False).only('id')
+            print 'Finding total...'
+            total = q.count()
+            i = 0
+            for post in q.iterator():
+                i += 1
+                if i == 1 or not i % 10:
+                    print '\r%i of %i %.02f%%' % (i, total, i/float(total)*100),
+                    sys.stdout.flush()
+                    transaction.commit()
+                post.article_ngrams_extracted = False
+                post.article_ngrams_extracted_datetime = None
+                post.article_ngram_counts = None
+                post.save()
+        finally:
+            settings.DEBUG = tmp_debug
 
     def backwards(self, orm):
         "Write your backwards methods here."

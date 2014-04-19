@@ -10,7 +10,7 @@ from collections import defaultdict
 from django.conf import settings
 from django.db import models, reset_queries
 from django.db.models import signals
-from django.db.transaction import commit_on_success
+from django.db.transaction import commit_on_success, commit
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_text
 from django.utils import timezone
@@ -590,6 +590,7 @@ class Post(models.Model, MaterializedView):
             if i == 1 or not i % 100 or i == total:
                 print '\rClearing ngrams %i of %i %.02f%%.' % (i, total, float(i)/total*100),
                 sys.stdout.flush()
+                commit()
             self.article_ngram_counts = None
             self.article_ngrams_extracted = False
             self.article_ngrams_extracted_datetime = None

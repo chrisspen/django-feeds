@@ -577,6 +577,24 @@ class Post(models.Model, MaterializedView):
         self.article_ngrams_extracted_datetime = datetime.now()
         self.save()
 
+    @classmethod
+    @commit_on_success
+    def clear_ngrams(cls, post_ids=None, force=False):
+        q = cls.objects.filter(article_ngrams_extracted = True).only('id')
+        if post_ids:
+            q = q.filter(id__in=post_ids)
+        total = q.count()
+        i = 0
+        for self in q.iterator():
+            i += 1
+            if i == 1 or not i % 100 or i == total:
+                print '\rClearing ngrams %i of %i %.02f%%.' % (i, total, float(i)/total*100),
+                sys.stdout.flush()
+            self.article_ngram_counts = None
+            self.article_ngrams_extracted = False
+            self.article_ngrams_extracted_datetime = None
+            self.save()
+
 class NGram(models.Model):
     
     text = models.CharField(

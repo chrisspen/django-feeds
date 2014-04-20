@@ -529,19 +529,12 @@ class Post(models.Model, MaterializedView):
         finally:
             settings.DEBUG = tmp_debug
     
-    @commit_on_success
-    def extract_ngrams(self, force=False):
-        if not force and (self.article_ngrams_extracted or not self.article_content_length):
-            return
-        
-        #self.ngrams.all().delete()
-        
-        min_text_length = 4
-        min_n = 1
-        max_n = 6
+    def get_ngrams(self, min_n=1, max_n=6, min_text_length=4):
+        """
+        Returns a dictionary of the form {ngram:occurrence_count}.
+        """
         
         content = (self.content or '') + ' ' + (self.article_content or '')
-        
         text = content.strip().lower()
         text = re.sub(r'[^a-zA-Z0-9]+', ' ', text, flags=re.DOTALL)
         text = re.sub(r'[\s\t\n\r]+', ' ', text, flags=re.DOTALL)
@@ -551,26 +544,21 @@ class Post(models.Model, MaterializedView):
         ngrams = []
         for n in xrange(min_n, max_n+1):
             ngrams.extend(ngrams_iter(sequence=text, n=n))
-        #print '%i ngrams' % len(ngrams)
-        #ngram_counts = defaultdict(int)
         ngram_counts = {}
-#        new_ngram_objects = []
-#        new_ngrams = set()
         for ngram in ngrams:
             ngram = (' '.join(ngram)).strip()
             if len(ngram) < min_text_length:
                 continue
             ngram_counts.setdefault(ngram, 0)
             ngram_counts[ngram] += 1
-#            if ngram not in new_ngrams and not NGram.objects.filter(text=ngram).exists():
-#                new_ngrams.add(ngram)
-#                new_ngram_objects.append(NGram(text=ngram, n=ngram.count(' ')+1))
+        return ngram_counts
+    
+    @commit_on_success
+    def extract_ngrams(self, force=False):
+        if not force and (self.article_ngrams_extracted or not self.article_content_length):
+            return
         
-#        NGram.objects.bulk_create(new_ngram_objects)
-#        PostNGram.objects.bulk_create([
-#            PostNGram(post=self, ngram=NGram.objects.get(text=ngram), count=count)
-#            for ngram, count in ngram_counts.iteritems()
-#        ])
+        ngram_counts = self.get_ngrams()
         
         self.article_ngram_counts = ngram_counts
         self.article_ngrams_extracted = True

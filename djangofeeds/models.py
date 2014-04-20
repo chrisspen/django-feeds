@@ -529,7 +529,7 @@ class Post(models.Model, MaterializedView):
         finally:
             settings.DEBUG = tmp_debug
     
-    def get_ngrams(self, min_n=1, max_n=6, min_text_length=4):
+    def get_ngrams(self, min_n=1, max_n=3, min_text_length=4):
         """
         Returns a dictionary of the form {ngram:occurrence_count}.
         """

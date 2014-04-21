@@ -529,17 +529,25 @@ class Post(models.Model, MaterializedView):
         finally:
             settings.DEBUG = tmp_debug
     
+    @property
+    def ngramable_text(self):
+        return (self.content or '') + ' ' + (self.article_content or '')
+        
+    @property
+    def ngramable_tokens(self):
+        content = self.ngramable_text
+        text = content.strip().lower()
+        text = re.sub(r'[^a-zA-Z0-9]+', ' ', text, flags=re.DOTALL)
+        text = re.sub(r'[\s\t\n\r]+', ' ', text, flags=re.DOTALL)
+        text = text.strip().split(' ')
+        return text
+    
     def get_ngrams(self, min_n=1, max_n=3, min_text_length=4):
         """
         Returns a dictionary of the form {ngram:occurrence_count}.
         """
         
-        content = (self.content or '') + ' ' + (self.article_content or '')
-        text = content.strip().lower()
-        text = re.sub(r'[^a-zA-Z0-9]+', ' ', text, flags=re.DOTALL)
-        text = re.sub(r'[\s\t\n\r]+', ' ', text, flags=re.DOTALL)
-        text = text.strip()
-        text = text.split(' ')
+        text = self.ngramable_tokens
         
         ngrams = []
         for n in xrange(min_n, max_n+1):

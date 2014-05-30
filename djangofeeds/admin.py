@@ -13,7 +13,7 @@ from djangofeeds.models import (
     Article, NGram, PostNGram,
 )
 
-from admin_steroids import BetterRawIdFieldsModelAdmin, ReadonlyModelAdmin
+from admin_steroids.options import BetterRawIdFieldsModelAdmin, ReadonlyModelAdmin
 from admin_steroids.utils import get_admin_changelist_url, view_related_link, view_link
 from admin_steroids.filters import NullListFilter
 

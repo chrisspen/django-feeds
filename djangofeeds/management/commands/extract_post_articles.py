@@ -29,14 +29,30 @@ class Command(BaseCommand):
                     help="A specific year to process."),
         make_option('--month', 
                     help="A specific month to process."),
+#        make_option(
+#            '--without-error',
+#            action='store_true',
+#            default=False,
+#            help="A specific month to process."),
+        make_option(
+            '--dryrun',
+            action='store_true',
+            default=False,
+            help="Makes no changes."),
     )
 
     help = ("Attempts to extract the article text from the URL associated with each post.", )
 
     def handle(self, *args, **options):
+        dryrun = options['dryrun']
         q = Post.objects.all_articleless()
+        
+        # Keep retrying until we get a legitimate error code
+        # explaining the failure.
         q = q.filter(article_content_error_code__isnull=True)
-        q = q.filter(article_content_success__isnull=True)
+        
+        #q = q.filter(article_content_success__isnull=True)
+        
         #TODO:retry article_content_success=False but with error_code__isnull=False?
         year = options['year']
         month = options['month']
@@ -52,6 +68,8 @@ class Command(BaseCommand):
         error_count = 0 # any type of exception was thrown
         meh_count = 0 # no errors were thrown, even if we didn't get content
         print '%i posts without an article.' % (total,)
+        if dryrun:
+            return
         for post in q.iterator():
             i += 1
             print '\rProcessing post %i (%i of %i, %i success, %i errors, %i mehs)...' \

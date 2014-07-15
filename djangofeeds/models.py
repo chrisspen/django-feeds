@@ -704,4 +704,35 @@ class Article(models.Model):
         ordering = ('-year', '-month')
         app_label = APP_LABEL
         verbose_name = _('article')
+
+class ArticleByDomain(models.Model):
+    
+    # MySQL can have no more than 255 length...
+    id = models.CharField(max_length=255, primary_key=True)
+    
+    year = models.PositiveIntegerField(editable=False)
+    
+    month = models.PositiveIntegerField(editable=False)
+    
+    domain = models.CharField(max_length=255)
+    
+    total = models.PositiveIntegerField(editable=False)
+    
+    missing = models.PositiveIntegerField(editable=False)
+    
+    missing_without_error = models.PositiveIntegerField(editable=False)
+    
+    missing_without_error_or_success = models.PositiveIntegerField(editable=False)
+    
+    missing_ratio = models.FloatField(editable=False)
+    
+    missing_without_error_ratio = models.FloatField(editable=False)
+    
+    missing_without_error_or_success_ratio = models.FloatField(editable=False)
+    
+    class Meta:
+        managed = False
+        ordering = ('-year', '-month', '-missing_without_error', '-missing_ratio')
+        app_label = APP_LABEL
+        verbose_name = _('article by domain')
         

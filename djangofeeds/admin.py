@@ -1,3 +1,6 @@
+from datetime import date, timedelta
+
+from django.db.models import Q
 from django.contrib import admin
 from django.contrib.admin import FieldListFilter, ListFilter, SimpleListFilter
 from django.utils.translation import (
@@ -11,6 +14,7 @@ from djangofeeds.models import (
     Feed, Post, Enclosure, Category,
     BlacklistedDomain,
     Article, NGram, PostNGram,
+    ArticleByDomain,
 )
 
 from admin_steroids.options import BetterRawIdFieldsModelAdmin, ReadonlyModelAdmin
@@ -201,6 +205,28 @@ class ArticleAdmin(ReadonlyModelAdmin):
         'mean_length',
     )
 
+class ArticleByDomainAdmin(ReadonlyModelAdmin):
+    
+    list_display = (
+        'year',
+        'month',
+        'domain',
+        'total',
+        'missing',
+        'missing_without_error',
+        'missing_ratio',
+        'missing_without_error_ratio',
+    )
+    
+    def get_queryset(self, request):
+        qs = super(ArticleByDomainAdmin, self).get_queryset(request)
+        today = date.today()
+        last_month = today - timedelta(days=30)
+        qs = qs.filter(
+            Q(year=today.year, month=today.month)|\
+            Q(year=last_month.year, month=last_month.month))
+        return qs
+    
 class NGramAdmin(BaseModelAdmin):
     
     list_display = (
@@ -262,6 +288,7 @@ admin.site.register(Feed, FeedAdmin)
 admin.site.register(Post, PostAdmin)
 admin.site.register(BlacklistedDomain, BlacklistedDomainAdmin)
 admin.site.register(Article, ArticleAdmin)
+admin.site.register(ArticleByDomain, ArticleByDomainAdmin)
 
 #admin.site.register(NGram, NGramAdmin)
 #admin.site.register(PostNGram, PostNGramAdmin)

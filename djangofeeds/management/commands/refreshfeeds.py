@@ -4,15 +4,17 @@ import sys
 import time
 from optparse import make_option
 from datetime import datetime, timedelta
-from multiprocessing import Process, Lock
+from multiprocessing import Process, Lock, cpu_count
 
 import warnings
 warnings.simplefilter('error', DeprecationWarning)
 
 from django.core.management.base import NoArgsCommand
 from django.db.models import Q
-from django.db import connection
+from django.db import connection, transaction
 from django.utils import timezone
+
+from joblib import Parallel, delayed
 
 from djangofeeds.models import Feed
 from djangofeeds.importers import FeedImporter
@@ -40,53 +42,16 @@ def get_feeds(importer, force=False, days=1, feed_ids=None, name_contains=None):
         q = q.filter(name__icontains=name_contains)
     return q
 
-def refresh_all(lock, verbose=True, force=False, days=1, name_contains=None, feed_ids=None, first=False):
-    """ Refresh all feeds in the system. """
+#@transaction.commit_on_success
+def refresh_feed_helper(feed_id):
+    """
+    Refreshes a specific feed.
+    """
+    print 'Refreshing feed %s...' % feed_id
+    connection.close()
     importer = FeedImporter()
-    
-    total = None
-    last_total = None
-    i = 0
-    while 1:
-    
-        # Retrieve the next stale feed.
-        feed = None
-        try:
-            lock.acquire()
-            #connection.close()
-            q = get_feeds(
-                importer=importer,
-                force=force,
-                days=days,
-                feed_ids=feed_ids,
-                name_contains=name_contains,
-            )
-#            if first:
-            if total is None:
-                total = q.count()
-            if last_total is not None:
-                i = total - last_total
-            last_total = q.count()
-            if q.exists():
-                feed = q[0]
-                feed.date_last_refresh = timezone.now()
-                feed.save()
-                print "Refreshing feed %s (%i of %i)..." % (feed.name, i, total)
-            
-            # Update status.
-#            connection.close()
-#            Job.objects.update()
-            if feed:
-                Job.update_progress(total_parts=total, total_parts_complete=i, lock=False)
-            else:
-                Job.update_progress(total_parts=total, total_parts_complete=total, lock=False)
-                connection.close()
-                return
-        finally:
-            lock.release()
-        
-        # Update feed.
-        feed = importer.update_feed(feed, force=True)
+    feed = Feed.objects.get(id=feed_id)
+    importer.update_feed(feed, force=True)
 
 class Command(NoArgsCommand):
     option_list = NoArgsCommand.option_list + (
@@ -98,8 +63,12 @@ class Command(NoArgsCommand):
                     help="Only refreshes feeds whose name contains this text."),
         make_option('--feeds', dest="feeds", default='',
                     help="Specific feeds to refresh."),
-        make_option('--processes', default=4,
+        make_option('--processes', default=0,
                     help="The number of processes to use."),
+        make_option('--max-feeds', default=0,
+                    help="The maximum number of feeds to refresh."),
+        make_option('--dryrun', default=False, action='store_true',
+                    help="If given, writes no changes."),
     )
 
     help = ("Refresh feeds", )
@@ -108,28 +77,41 @@ class Command(NoArgsCommand):
     can_import_settings = True
 
     def handle_noargs(self, **options):
+        
+        # Initialize parameters.
         force = options.get('force')
-        processes = int(options['processes'])
+        dryrun = options['dryrun']
+        processes = int(options['processes']) or cpu_count()
+        days = int(options['days'])
         feed_ids = [int(_.strip()) for _ in (options['feeds'] or '').split(',') if _.strip().isdigit()]
-        process_stack = []
-        lock = Lock()
-        if processes:
-            # Start processes.
-            for _ in xrange(processes):
-                connection.close()
-                p = Process(
-                    target=refresh_all,
-                    kwargs=dict(
-                        lock=lock,
-                        feed_ids=feed_ids,
-                        force=force,
-                        days=int(options['days']),
-                        name_contains=options['name_contains'],
-                        first=not _,
-                ))
-                #p.daemon = True#breaks evaluate() launching processes of its own
-                p.start()
-                process_stack.append(p)
-            # Wait for processes to end.
-            while any(p for p in process_stack if p.is_alive()):
-                time.sleep(1)
+        name_contains = options['name_contains']
+        max_feeds = int(options['max_feeds'])
+        
+        # Retrieve feeds.
+        importer = FeedImporter()
+        q = get_feeds(
+            importer=importer,
+            force=force,
+            days=days,
+            feed_ids=feed_ids,
+            name_contains=name_contains,
+        ).values_list('id', flat=True)
+        if max_feeds:
+            q = q[:max_feeds]
+        total = q.count()
+        print '%i feeds found' % total
+        if dryrun:
+            return
+        
+        # Initialize tasks.
+        tasks = [
+            delayed(refresh_feed_helper)(feed_id=feed_id)
+            for feed_id in q.iterator()
+        ]
+        
+        #TODO:launch thread to update Job progress?
+        
+        # Run all tasks.
+        connection.close()
+        Parallel(n_jobs=processes, verbose=50)(tasks)
+        

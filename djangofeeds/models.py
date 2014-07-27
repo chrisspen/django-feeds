@@ -183,8 +183,8 @@ class Feed(models.Model):
     class Meta:
         app_label = APP_LABEL
         ordering = ("id", )
-        verbose_name = _(u"syndication feed")
-        verbose_name_plural = _(u"syndication feeds")
+        verbose_name = _(u"feed")
+        verbose_name_plural = _(u"feeds")
 
     def __init__(self, *args, **kwargs):
         super(Feed, self).__init__(*args, **kwargs)

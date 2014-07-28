@@ -87,6 +87,7 @@ class FeedAdmin(BaseModelAdmin):
         'date_last_refresh',
         'is_active',
         'fresh',
+        'post_link',
     )
     list_filter = (
         'is_active',

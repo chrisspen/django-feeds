@@ -6,6 +6,6 @@ httplib2
 html5lib
 pytz
 fake-useragent
-nltk==2.0.4
-django-picklefield==0.3.1
+nltk>=2.0.4
+django-picklefield>=0.3.1
 joblib>=0.8.2

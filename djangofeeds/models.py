@@ -420,7 +420,9 @@ class Post(models.Model, MaterializedView):
     
     guid = models.CharField(_(u"guid"), max_length=200, blank=True)
     author = models.CharField(_(u"author"), max_length=50, blank=True)
-    date_published = models.DateField(_(u"date published"))
+    date_published = models.DateField(
+        _(u"date published"),
+        db_index=True)
     date_updated = models.DateTimeField(_(u"date updated"))
     enclosures = models.ManyToManyField(Enclosure, blank=True)
     categories = models.ManyToManyField(Category)

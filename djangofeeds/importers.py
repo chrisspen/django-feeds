@@ -4,6 +4,7 @@ import socket
 import feedparser
 import httplib as http
 import urllib2
+from pprint import pprint
 
 from datetime import datetime
 
@@ -310,13 +311,24 @@ class FeedImporter(object):
         
         # Extract link from summary instead of link field if pattern specified.
         if feed_obj.summary_detail_link_regex:
-            link_matches = re.findall(
-                feed_obj.summary_detail_link_regex,
-                entry['summary_detail']['value'],
-                re.I|re.DOTALL)
-            self.logger.debug('Summary detail links: '+str(link_matches))
-            if link_matches:
-                fields['link'] = link_matches[0].strip()
+            if 'summary_detail' in entry:
+                # Old Reddit RSS format.
+                link_matches = re.findall(
+                    feed_obj.summary_detail_link_regex,
+                    entry['summary_detail']['value'],
+                    re.I|re.DOTALL)
+                self.logger.debug('Summary detail links: '+str(link_matches))
+                if link_matches:
+                    fields['link'] = link_matches[0].strip()
+            elif 'summary' in entry:
+                # New Reddit RSS format.
+                link_matches = re.findall(
+                    feed_obj.summary_detail_link_regex,
+                    entry['summary'],
+                    re.I|re.DOTALL)
+                self.logger.debug('Summary detail links v2: '+str(link_matches))
+                if link_matches:
+                    fields['link'] = link_matches[0].strip()
         
         if conf.LINK_URL_REGEXES:
             for pattern in conf.LINK_URL_REGEXES:

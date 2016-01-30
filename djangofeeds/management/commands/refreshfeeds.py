@@ -43,12 +43,13 @@ def get_feeds(importer, force=False, days=1, feed_ids=None, name_contains=None):
     return q
 
 #@transaction.commit_on_success
-def refresh_feed_helper(feed_id):
+def refresh_feed_helper(feed_id, cleanup=True):
     """
     Refreshes a specific feed.
     """
     print 'Refreshing feed %s...' % feed_id
-    connection.close()
+    if cleanup:
+        connection.close()
     importer = FeedImporter()
     feed = Feed.objects.get(id=feed_id)
     importer.update_feed(feed, force=True)
@@ -106,7 +107,7 @@ class Command(NoArgsCommand):
         if processes == 1:
         
             for feed_id in q.iterator():
-                refresh_feed_helper(feed_id=feed_id)
+                refresh_feed_helper(feed_id=feed_id, cleanup=False)
         
         else:
             

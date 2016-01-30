@@ -103,15 +103,22 @@ class Command(NoArgsCommand):
         if dryrun:
             return
         
-        # Initialize tasks.
-        tasks = [
-            delayed(refresh_feed_helper)(feed_id=feed_id)
-            for feed_id in q.iterator()
-        ]
+        if processes == 1:
         
-        #TODO:launch thread to update Job progress?
+            for feed_id in q.iterator():
+                refresh_feed_helper(feed_id=feed_id)
         
-        # Run all tasks.
-        connection.close()
-        Parallel(n_jobs=processes, verbose=50)(tasks)
-        
+        else:
+            
+            # Initialize tasks.
+            tasks = [
+                delayed(refresh_feed_helper)(feed_id=feed_id)
+                for feed_id in q.iterator()
+            ]
+            
+            #TODO:launch thread to update Job progress?
+            
+            # Run all tasks.
+            connection.close()
+            Parallel(n_jobs=processes, verbose=50)(tasks)
+            
